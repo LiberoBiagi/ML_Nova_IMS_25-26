@@ -34,3 +34,5 @@ def map_from_train_to_test(X_train, X_test, group_col, value_col, fill=-1):
     mapping = X_train.groupby(group_col)[value_col].first().to_dict()
     X_test[value_col] = X_test[group_col].map(mapping).fillna(fill)
     return X_test
+
+
