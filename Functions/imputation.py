@@ -4,22 +4,41 @@ from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import IterativeImputer
 from sklearn.ensemble import ExtraTreesRegressor
 
-def mode_imputation(df):
+def fit_mode_imputer(df):
     """
-    Impute missing Brand names using the most frequent Brand for the given model.
+    Computes the most frequent Brand (mode) for each model in the dataframe.
     
     Args:
         df: Input DataFrame containing 'model_transformed' and 'Brand_transformed'.
         
     Returns:
+        pd.Series: Mapping of model_transformed to the most frequent Brand_transformed.
+    """
+    # Get the most frequent brand for each model
+    brand_models = df.groupby("model_transformed")["Brand_transformed"].agg(lambda x: x.mode()[0] if len(x.mode()) > 0 else pd.NA)
+    return brand_models
+
+def apply_mode_imputer(df, brand_models):
+    """
+    Impute missing Brand names using the pre-computed mode mapping.
+    
+    Args:
+        df: Input DataFrame to impute.
+        brand_models: Mapping of model_transformed to Brand_transformed (from fit_mode_imputer).
+        
+    Returns:
         pd.DataFrame: Dataframe with imputed 'Brand_transformed'.
     """
-    # Get the most frequent brand for each model -> returns df with model and brand
-    brand_models = df.groupby("model_transformed")["Brand_transformed"].agg(lambda x: x.mode()[0] if len(x.mode()) > 0 else pd.NA)
-    df = pd.merge(df, brand_models, on="model_transformed", how="left", suffixes=("", "_mode"))  # add the model and brand df to our main df (onyl add the brand columns, join on model)
+    df = df.copy() # Avoid modifying the original dataframe
     
-    df["Brand_transformed"] = df["Brand_transformed"].fillna(df["Brand_transformed_mode"])  # rename new column
-    df.drop("Brand_transformed_mode", axis=1, inplace=True)  # remove the old brand column
+    # Merge the brand modes into the dataframe
+    df = pd.merge(df, brand_models, on="model_transformed", how="left", suffixes=("", "_mode"))
+    
+    # Fill NA values in Brand_transformed with the mode
+    df["Brand_transformed"] = df["Brand_transformed"].fillna(df["Brand_transformed_mode"])
+    
+    # Remove the temporary column
+    df.drop("Brand_transformed_mode", axis=1, inplace=True)
     
     return df
 
