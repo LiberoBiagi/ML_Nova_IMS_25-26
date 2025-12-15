@@ -5,6 +5,18 @@ from Functions.Train import *
 
 
 class HoldoutRandomSearch:
+    """
+    Performs randomized hyperparameter search using a fixed holdout validation set.
+    
+    Optimizes model hyperparameters specifically for the BrandModelTrainer wrapper.
+    Tracks the best configuration globally and per-brand.
+    
+    Attributes:
+        trainer_class: The class to instantiate (e.g., BrandModelTrainer).
+        param_space: Dictionary or list of hyperparameter distributions.
+        n_iter: Number of random configurations to test.
+        optimize_metric: Metric to minimize ('mae' or 'rmse').
+    """
     def __init__(self, trainer_class, param_space, n_iter=20, optimize_metric='mae'):
         self.trainer_class = trainer_class
         self.param_space = param_space
@@ -17,6 +29,12 @@ class HoldoutRandomSearch:
         self.brand_best_configs = {}
         
     def sample_params(self):
+        """
+        Randomly samples a parameter configuration from the parameter space.
+        
+        Returns:
+            dict: Sampled hyperparameters.
+        """
         if isinstance(self.param_space, list):
             return random.choice(self.param_space)
         else:
@@ -44,6 +62,21 @@ class HoldoutRandomSearch:
         return summary
     
     def run(self, X_train, y_train, X_val, y_val):
+        """
+        Executes the random search process.
+        
+        Iterates n_iter times, training a new model with sampled parameters, evaluating on
+        the validation set, and updating best scores.
+        
+        Args:
+            X_train: Training features.
+            y_train: Training target.
+            X_val: Validation features.
+            y_val: Validation target.
+            
+        Returns:
+            tuple: (best_trainer_instance, best_params_dict, best_score)
+        """
         metric_name = self.optimize_metric.upper()
         print(f"Running random search ({self.n_iter} iterations)...")
         print(f"Optimizing for: {metric_name}\n")

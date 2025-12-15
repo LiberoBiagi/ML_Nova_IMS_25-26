@@ -9,12 +9,33 @@ import random
 import time
 
 class BrandModelTrainer:
+    """
+    A unified interface for training and evaluating models separately for each car brand.
+    
+    This class handles the scaling (RobustScaler) and encoding (OneHotEncoder) pipeline 
+    automatically for each brand's subset of data.
+    
+    Attributes:
+        estimator: The base sklearn estimator to be cloned for each brand.
+        brand_models: Dictionary storing the trained pipeline for each brand.
+        feature_cols: List of feature names used for training.
+    """
     def __init__(self, estimator):
         self.estimator = estimator
         self.brand_models = {}
         self.feature_cols = None
 
     def fit(self, X_train, y_train):
+        """
+        Fits a separate model pipeline for each unique brand in X_train.
+        
+        Args:
+            X_train: Training features DataFrame containing a 'Brand' column.
+            y_train: Training target Series.
+            
+        Returns:
+            self: The fitted BrandModelTrainer instance.
+        """
         self.feature_cols = [c for c in X_train.columns if c != "Brand"]
         print(f"Training models for {len(X_train['Brand'].unique())} brands...\n")
 
@@ -43,6 +64,15 @@ class BrandModelTrainer:
         return self
 
     def predict(self, X):
+        """
+        Predicts target values for the input data using the brand-specific models.
+        
+        Args:
+            X: Input DataFrame containing a 'Brand' column.
+            
+        Returns:
+            np.array: Array of predicted values. Zero for brands not seen during training.
+        """
         preds = np.zeros(len(X))
         for brand, model in self.brand_models.items():
             mask = X["Brand"] == brand
@@ -53,6 +83,16 @@ class BrandModelTrainer:
         return preds
 
     def evaluate_train(self, X_train, y_train):
+        """
+        Evaluates the model on the training set and prints performance metrics.
+        
+        Args:
+            X_train: Training features DataFrame.
+            y_train: Training target Series.
+            
+        Returns:
+            dict: Dictionary containing RMSE, MAE, and R².
+        """
         y_pred = self.predict(X_train)
         rmse = np.sqrt(mean_squared_error(y_train, y_pred))
         mae = mean_absolute_error(y_train, y_pred)
@@ -64,6 +104,16 @@ class BrandModelTrainer:
         return {"RMSE": rmse, "MAE": mae, "R²": r2}
 
     def evaluate(self, X_val, y_val):
+        """
+        Evaluates the model on the validation set and prints performance metrics.
+        
+        Args:
+            X_val: Validation features DataFrame.
+            y_val: Validation target Series.
+            
+        Returns:
+            dict: Dictionary containing RMSE, MAE, and R².
+        """
         y_pred = self.predict(X_val)
         rmse = np.sqrt(mean_squared_error(y_val, y_pred))
         mae = mean_absolute_error(y_val, y_pred)
@@ -75,6 +125,17 @@ class BrandModelTrainer:
         return {"RMSE": rmse, "MAE": mae, "R²": r2}
 
     def evaluate_by_brand(self, X, y, split_name="Validation"):
+        """
+        Calculates and prints performance metrics broken down by brand.
+        
+        Args:
+            X: Input DataFrame.
+            y: Target Series.
+            split_name: Name of the data split (for display). Default is "Validation".
+            
+        Returns:
+            pd.DataFrame: DataFrame containing metrics per brand.
+        """
         y_pred = self.predict(X)
         results = []
         for brand in X["Brand"].unique():
@@ -91,9 +152,29 @@ class BrandModelTrainer:
         return df
 
     def evaluate_train_by_brand(self, X_train, y_train):
+        """
+        Calculates and prints training performance metrics per brand.
+        
+        Args:
+            X_train: Training features DataFrame.
+            y_train: Training target Series.
+            
+        Returns:
+            pd.DataFrame: DataFrame containing metrics per brand.
+        """
         return self.evaluate_by_brand(X_train, y_train, split_name="Training")
     
     def save_predictions(self, X, path):
+        """
+        Generates predictions and saves them to a CSV file.
+        
+        Args:
+            X: Input DataFrame containing 'CarID' and features.
+            path: Path to save the CSV file.
+            
+        Returns:
+            pd.DataFrame: The DataFrame that was saved.
+        """
         preds = self.predict(X)
         df = pd.DataFrame({
             "CarID": X["CarID"].values,
@@ -105,6 +186,18 @@ class BrandModelTrainer:
 
 
 class HoldoutRandomSearch:
+    """
+    Performs randomized hyperparameter search using a fixed holdout validation set.
+    
+    Optimizes model hyperparameters specifically for the BrandModelTrainer wrapper.
+    Tracks the best configuration globally and per-brand.
+    
+    Attributes:
+        trainer_class: The class to instantiate (e.g., BrandModelTrainer).
+        param_space: Dictionary or list of hyperparameter distributions.
+        n_iter: Number of random configurations to test.
+        optimize_metric: Metric to minimize ('mae' or 'rmse').
+    """
     def __init__(self, trainer_class, param_space, n_iter=20, optimize_metric='mae'):
         self.trainer_class = trainer_class
         self.param_space = param_space
@@ -117,6 +210,12 @@ class HoldoutRandomSearch:
         self.brand_best_configs = {}
         
     def sample_params(self):
+        """
+        Randomly samples a parameter configuration from the parameter space.
+        
+        Returns:
+            dict: Sampled hyperparameters.
+        """
         if isinstance(self.param_space, list):
             return random.choice(self.param_space)
         else:
@@ -144,6 +243,21 @@ class HoldoutRandomSearch:
         return summary
     
     def run(self, X_train, y_train, X_val, y_val):
+        """
+        Executes the random search process.
+        
+        Iterates n_iter times, training a new model with sampled parameters, evaluating on
+        the validation set, and updating best scores.
+        
+        Args:
+            X_train: Training features.
+            y_train: Training target.
+            X_val: Validation features.
+            y_val: Validation target.
+            
+        Returns:
+            tuple: (best_trainer_instance, best_params_dict, best_score)
+        """
         metric_name = self.optimize_metric.upper()
         print(f"Running random search ({self.n_iter} iterations)...")
         print(f"Optimizing for: {metric_name}\n")

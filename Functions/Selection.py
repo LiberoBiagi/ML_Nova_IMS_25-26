@@ -5,12 +5,22 @@ from sklearn.feature_selection import VarianceThreshold,  RFE
 import pandas as pd
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
-#FILTER METHOD
-
-
-#ANOVA FUNCTION
 
 def anova_for_categorical(df, y, categorical_cols):
+    """
+    Performs ANOVA F-test for categorical features against a continuous target.
+    
+    For numeric columns not in categorical_cols, it calculates correlation squared * n_samples 
+    as a proxy for F-statistic (or 0 if invalid).
+    
+    Args:
+        df: Input DataFrame containing features.
+        y: Target variable Series.
+        categorical_cols: List of column names to be treated as categorical.
+        
+    Returns:
+        tuple: (f_scores, p_values) as numpy arrays.
+    """
     # Align indices between df and y
     common_idx = df.index.intersection(y.index)
     df_aligned = df.loc[common_idx]
@@ -46,6 +56,26 @@ def filter_method_selection(X_train, y_train, categorical_cols, num_cols,
                             top_k=None,
                             var_threshold=0.01,
                             corr_threshold=0.85):
+    """
+    Applies a filter-based feature selection pipeline.
+    
+    Pipeline Steps:
+    1. Variance Threshold: Removes numeric features with low variance.
+    2. Spearman Correlation: Removes highly correlated numeric features.
+    3. ANOVA F-test: Ranks remaining features (both numeric and categorical).
+    
+    Args:
+        X_train: Training features DataFrame.
+        y_train: Training target Series.
+        categorical_cols: List of categorical column names.
+        num_cols: List of numeric column names.
+        top_k: Number of top features to select based on ANOVA score. If None, returns all.
+        var_threshold: Variance threshold for numeric features.
+        corr_threshold: Correlation threshold for removing collinear features.
+        
+    Returns:
+        tuple: (selected_features_list, X_filtered_df, results_summary_df)
+    """
     
     print("FILTER METHOD (Variance + Spearman Correlation + ANOVA)")
     
@@ -107,6 +137,25 @@ def filter_method_selection(X_train, y_train, categorical_cols, num_cols,
     return selected_features, X_filtered[selected_features], results_df
 
 def rfe(X_train, X_val, y_train, y_val, num_cols, step=1, n_estimators=100, random_state=69):
+    """
+    Performs Recursive Feature Elimination (RFE) with a Random Forest Regressor.
+    
+    Iteratively removes features and evaluates the model on a validation set to find the 
+    optimal number of features.
+    
+    Args:
+        X_train: Training features DataFrame.
+        X_val: Validation features DataFrame.
+        y_train: Training target Series.
+        y_val: Validation target Series.
+        num_cols: List of numeric columns to consider for RFE.
+        step: Number of features to remove at each iteration.
+        n_estimators: Number of trees in the Random Forest.
+        random_state: Random state for reproducibility.
+        
+    Returns:
+        tuple: (optimal_number_of_features, best_mae, selected_feature_names, train_mae_history, val_mae_history)
+    """
     
     valid_num_cols = [col for col in num_cols if col in X_train.columns]
     if len(valid_num_cols) == 0:

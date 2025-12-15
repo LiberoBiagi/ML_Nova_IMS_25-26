@@ -4,7 +4,16 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 def univariate_analysis_cat(X_train, col):
-    """Bar chart and pie chart for categorical features."""
+    """
+    Creates a bar chart and a pie chart for a categorical feature.
+    
+    Args:
+        X_train: Input DataFrame.
+        col: The name of the categorical column to visualize.
+        
+    Returns:
+        None: Displays the plots using matplotlib/seaborn.
+    """
     fig, ax = plt.subplots(1, 2, figsize=(15, 6))
 
     # Count plot
@@ -27,7 +36,18 @@ def univariate_analysis_cat(X_train, col):
     plt.show()
 
 def bivariate_analysis_num(X_train, y_train, x_col, target_name='price'):
-    """Scatter plot and box plot for numerical features against target."""
+    """
+    Creates a scatter plot and a box plot for a numerical feature against the target.
+    
+    Args:
+        X_train: Training features DataFrame.
+        y_train: Training target Series (or array).
+        x_col: The name of the numerical column to visualize.
+        target_name: The name of the target variable for labeling (default: 'price').
+        
+    Returns:
+        None: Displays the plots using matplotlib/seaborn.
+    """
     fig = plt.figure(figsize=(14, 3))
     sns.set_palette("Set1")
     plt.suptitle(x_col, size=20, weight='bold')
@@ -47,8 +67,20 @@ def bivariate_analysis_num(X_train, y_train, x_col, target_name='price'):
     plt.show()
 
 def spearman_corr_heatmap(X_train, y_train, target_name='price'):
-    """Spearman correlation heatmap for numerical features including target."""
-    # Select ONLY numeric columns
+    """
+    Calculates and plots a Spearman correlation heatmap for numerical features.
+    
+    Includes the target variable in the correlation matrix.
+    
+    Args:
+        X_train: Training features DataFrame.
+        y_train: Training target Series (or array).
+        target_name: The name to assign to the target variable in the DataFrame (default: 'price').
+        
+    Returns:
+        None: Displays the heatmap using matplotlib/seaborn.
+    """
+    # Select only numeric columns
     df_corr = X_train.select_dtypes(include='number').copy()
 
     # Add target
@@ -89,20 +121,13 @@ def plot_category_mean_vs_global_avg(
     Plot the mean of a continuous variable by category
     and compare it against the global average.
 
-    Parameters
-    ----------
-    df : pd.DataFrame
-        Input dataframe
-    cat_col : str
-        Categorical column name
-    cont_col : str
-        Continuous column name
-    figsize : tuple, optional
-        Figure size
-    bar_color : str, optional
-        Bar color
-    avg_line_color : str, optional
-        Global average line color
+    Args:
+        df: Input dataframe.
+        cat_col: Categorical column name.
+        cont_col: Continuous column name.
+        figsize: Figure size.
+        bar_color: Bar color.
+        avg_line_color: Global average line color.
     """
 
     # Calculate category means
